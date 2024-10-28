@@ -13,14 +13,19 @@ const {
   createOrder,
 } = require("../controllers/user");
 
-router.get("/users", getUser);
-router.post("/change-status", changeStatus);
-router.post("/change-role", changeRole);
-router.post("/user/cart", createCart);
-router.get("/user/cart", getCart);
-router.delete("/user/cart", deleteCart);
-router.post("/user/address", createAddress);
-router.post("/user/order", createOrder);
-router.get("/user/order", getOrder);
+const { authCheck, authAdmin } = require("../middlewares/authCheck");
+
+router.get("/users", authCheck, authAdmin, getUser);
+router.post("/change-status", authCheck, authAdmin, changeStatus);
+router.post("/change-role", authCheck, authAdmin, changeRole);
+
+router.post("/user/cart", authCheck, createCart);
+router.get("/user/cart", authCheck, getCart);
+router.delete("/user/cart", authCheck, deleteCart);
+
+router.post("/user/address", authCheck, createAddress);
+
+router.post("/user/order", authCheck, createOrder);
+router.get("/user/order", authCheck, getOrder);
 
 module.exports = router;
