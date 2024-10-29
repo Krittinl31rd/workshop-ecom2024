@@ -234,6 +234,27 @@ exports.createOrder = async (req, res) => {
         cartTotal: userCart.cartTotal
       }
     })
+    // update product
+    const updateProduct = await userCart.products.map((item) => ({
+      where: {
+        id: item.productId
+      },
+      data: {
+        quantity: { decrement: item.count },
+        sold: { increment: item.count }
+      }
+    }))
+
+    await Promise.all(
+      updateProduct.map((updated) => prisma.product.update(updated))
+    )
+
+    await prisma.cart.deleteMany({
+      where: {
+        orderbyId: Number(req.user.id)
+      }
+    })
+
     res.status(200).json({ status: true, message: `Created order successfully, total price ${order?.cartTotal}` })
   } catch (err) {
     res.status(500).send("Internet server error");
@@ -243,7 +264,22 @@ exports.createOrder = async (req, res) => {
 
 exports.getOrder = async (req, res) => {
   try {
-    res.status(200).send("getOrder");
+    const order = await prisma.order.findMany({
+      where: {
+        orderById: Number(req.user.id)
+      },
+      include: {
+        products: {
+          include: {
+            product: true
+          }
+        }
+      }
+    })
+    if (order.length == 0) {
+      return res.status(400).json({ message: "Order not found." })
+    }
+    res.status(200).json(order)
   } catch (err) {
     res.status(500).send("Internet server error");
     console.log(err);
