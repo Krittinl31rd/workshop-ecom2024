@@ -148,7 +148,24 @@ exports.getCart = async (req, res) => {
 
 exports.deleteCart = async (req, res) => {
   try {
-    res.status(200).send("deleteCart");
+    const cart = await prisma.cart.findFirst({
+      where: {
+        orderbyId: Number(req.user.id)
+      }
+    })
+    if (!cart) {
+      return res.status(400).json({ message: "Cart not found." })
+    }
+    await prisma.productOnCart.deleteMany({
+      where: { cartId: cart.id }
+    })
+    const result = await prisma.cart.deleteMany({
+      where: { orderbyId: Number(req.user.id) }
+    })
+    res.status(200).json({
+      message: "Deleted cart successfully.",
+      deletedCount: result.count
+    })
   } catch (err) {
     res.status(500).send("Internet server error");
     console.log(err);
@@ -157,7 +174,16 @@ exports.deleteCart = async (req, res) => {
 
 exports.createAddress = async (req, res) => {
   try {
-    res.status(200).send("createAddress");
+    const { address } = req.body;
+    await prisma.user.update({
+      where: {
+        id: Number(req.user.id)
+      },
+      data: {
+        address: address
+      }
+    })
+    res.status(200).json({ message: "Updated address successfully." });
   } catch (err) {
     res.status(500).send("Internet server error");
     console.log(err);
@@ -166,7 +192,49 @@ exports.createAddress = async (req, res) => {
 
 exports.createOrder = async (req, res) => {
   try {
-    res.status(200).send("createOrder");
+    const userCart = await prisma.cart.findFirst({
+      where: {
+        orderbyId: Number(req.user.id)
+      },
+      include: {
+        products: true
+      }
+    })
+    // check cart empty
+    if (!userCart || userCart.products.length == 0) {
+      return res.status(400).json({ status: false, message: "Cart is empty." })
+    }
+    // check quantity
+    for (const item of userCart.products) {
+      const product = await prisma.product.findUnique({
+        where: {
+          id: item.productId
+        },
+        select: {
+          quantity: true,
+          title: true
+        }
+      })
+      if (!product || item.count > product.quantity) {
+        return res.status(400).json({ status: false, message: `${product?.title || "Product"} out of stock.` })
+      }
+    }
+    // create new order
+    const order = await prisma.order.create({
+      data: {
+        products: {
+          create:
+            userCart.products.map((item) => ({
+              productId: item.productId,
+              count: item.count,
+              price: item.price
+            }))
+        },
+        orderById: Number(req.user.id),
+        cartTotal: userCart.cartTotal
+      }
+    })
+    res.status(200).json({ status: true, message: `Created order successfully, total price ${order?.cartTotal}` })
   } catch (err) {
     res.status(500).send("Internet server error");
     console.log(err);
