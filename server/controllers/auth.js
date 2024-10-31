@@ -78,20 +78,21 @@ exports.Login = async (req, res) => {
 
 exports.currentUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    res.status(200).send("currentUser");
+    const user = await prisma.user.findFirst({
+      where: {
+        email: req.user.email
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true
+      }
+    })
+    res.status(200).json(user)
   } catch (err) {
     res.status(500).send("Internet server error");
     console.log(err);
   }
 };
 
-exports.currentAdmin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    res.status(200).send("currentAdmin");
-  } catch (err) {
-    res.status(500).send("Internet server error");
-    console.log(err);
-  }
-};

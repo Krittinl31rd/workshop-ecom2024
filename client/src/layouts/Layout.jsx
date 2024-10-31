@@ -6,9 +6,7 @@ const Layout = () => {
   return (
     <>
       <MainNav />
-      <main className="flex items-center justify-center flex-1">
-        <Outlet />
-      </main>
+      <Outlet />
     </>
   );
 };
